@@ -58,14 +58,14 @@
                                 <option value="12">Kelas 12</option>
                             </select>
                         </div>
-                        <div class="form-group">
+                        <!-- <div class="form-group">
                             <label for="status">Status</label>
                             <div class="custom-control custom-switch">
                                 <input type="checkbox" name="status" class="custom-control-input" id="customSwitch1" checked>
                                 <label class="custom-control-label" for="customSwitch1">Aktif</label>
                             </div>
-                            <!-- <input type="checkbox" name="status" class="custom-control-input" id="status" data-toggle="switch" data-on-text="Aktif" data-off-text="Non-Aktif" data-on-color="success" data-off-color="danger" checked> -->
-                        </div>
+                            <input type="checkbox" name="status" class="custom-control-input" id="status" data-toggle="switch" data-on-text="Aktif" data-off-text="Non-Aktif" data-on-color="success" data-off-color="danger" checked>
+                        </div> -->
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Tutup</button>
@@ -78,27 +78,19 @@
 @endsection
 
 @push('scripts')
-<script>
-    function confirmDelete(studentId) {
-        Swal.fire({
-            title: 'Konfirmasi Hapus',
-            text: 'Anda yakin ingin menghapus data ini?',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#3085d6',
-            cancelButtonColor: '#d33',
-            confirmButtonText: 'Ya, Hapus!',
-            cancelButtonText: 'Batal'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                // Submit form untuk menghapus data
-                document.getElementById('deleteForm' + studentId).submit();
-            }
-        });
-    }
-</script>
 <script type="module">
     $(document).ready(function () {
+        const Toast = Swal.mixin({
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 3000,
+            timerProgressBar: true,
+            didOpen: (toast) => {
+                toast.addEventListener('mouseenter', Swal.stopTimer)
+                toast.addEventListener('mouseleave', Swal.resumeTimer)
+            }
+        });
         // Inisialisasi DataTable
         let table = $('#students-table').DataTable({
             processing: true,
@@ -107,10 +99,63 @@
             columns: [
                 { data: 'name', name: 'name' },
                 { data: 'class', name: 'class' },
-                { data: 'status', name: 'status' },
+                { 
+                    data: 'status', 
+                    name: 'status',
+                    render: function (data, type, row) {
+                        let statusText = data ? 'Aktif' : 'Non-Aktif';
+                        let statusClass = data ? 'success' : 'danger';
+                        return `
+                            <div class="custom-control custom-switch">
+                                <input type="checkbox" class="custom-control-input" id="customSwitch${row.id}" data-student-id="${row.id}" ${row} ${data ? 'checked' : ''}>
+                                <label class="custom-control-label text-${statusClass}" for="customSwitch${row.id}">${statusText}</label>
+                            </div>
+                        `;
+                    }
+                },
                 { data: 'action', name: 'action', orderable: false, searchable: false }
             ]
         });
+
+        $(document).on('click', '.delete-student-btn', function () {
+            let studentId = $(this).data('student-id');
+            confirmDelete(studentId);
+        });
+
+        function confirmDelete(studentId) {
+            Swal.fire({
+                title: 'Konfirmasi Hapus',
+                text: 'Anda yakin ingin menghapus data ini?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Ya, Hapus!',
+                cancelButtonText: 'Batal'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        type: "DELETE",
+                        url: "/student/" + studentId,
+                        data: {
+                            _token: '{{ csrf_token() }}',
+                            _method: 'DELETE',
+                        },
+                        success: function (response) {
+                            table.ajax.reload();
+
+                            Toast.fire({
+                                icon: 'success',
+                                title: response.success
+                            });
+                        },
+                        error: function (error) {
+                            console.log('Error:', error);
+                        }
+                    });
+                }
+            });
+        }
 
         $('#addStudentForm').submit(function (e) {
             e.preventDefault();
@@ -123,7 +168,10 @@
                     
                     $('#addSiswaModal').modal('hide');
 
-                    
+                    Toast.fire({
+                        icon: 'success',
+                        title: response.success
+                    });
                     table.ajax.reload();
                 },
                 error: function (error) {
@@ -131,10 +179,42 @@
                 }
             });
         });
+
+        $('#students-table').on('change', '.custom-control-input', function() {
+            let studentId = $(this).data('student-id');
+            let status = $(this).prop('checked') ? 1 : 0;
+    
+            $(this).attr('disabled', true);
+            console.log(studentId);
+            $.ajax({
+                type: "PUT",
+                url: `/student/${studentId}/update-status`,
+                data: {
+                    _token: '{{ csrf_token() }}',
+                    _method: 'PUT',
+                    status: status
+                },
+                success: function (response) {
+                    Toast.fire({
+                        icon: 'success',
+                        title: response.success
+                    });
+                    table.ajax.reload();
+                },
+                error: function (error) {
+                    console.log('Error:', error);
+                },
+                complete: function() {
+                    setTimeout(function() {
+                        $('#customSwitch'+studentId).removeAttr('disabled');
+                    }, 1000);
+                }
+            });
+        });
     });
 
 
-    $("#tableSiswa").DataTable();
+
 
 </script>
 @endpush

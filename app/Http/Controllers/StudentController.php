@@ -17,11 +17,10 @@ class StudentController extends Controller
             $data = Student::latest()->get();
             return Datatables::of($data)
                 ->addColumn('status', function ($row) {
-                    return $row->status ? 'Aktif' : 'Non-Aktif';
+                    return $row->status;
                 })
-                ->addColumn('action', function ($row) {
-                    return '<a href="#" class="btn btn-info btn-sm">Edit</a>
-                            <a href="#" class="btn btn-danger btn-sm" onclick="deleteStudent('.$row->id.')">Hapus</a>';
+                ->addColumn('action', function ($value) {
+                    return view('siswa.action',compact('value'));
                 })
                 ->rawColumns(['action'])
                 ->make(true);
@@ -44,12 +43,12 @@ class StudentController extends Controller
     public function store(Request $request)
     {
         $validatedData = $request->validate([
-            'name' => 'required',
+            'nama_siswa' => 'required',
             'class' => 'required|in:9,10,11,12',
         ]);
 
         Student::create([
-            'name' => $request->name,
+            'name' => $validatedData['nama_siswa'],
             'class' => $request->class,
             'status' => 1, 
         ]);
@@ -88,5 +87,20 @@ class StudentController extends Controller
     {
         Student::find($id)->delete();
         return response()->json(['success'=>'Siswa berhasil dihapus.']);
+    }
+
+    public function updateStatusSiswa(Request $request,$id)
+    {
+        $student = Student::findOrFail($id);
+        // dd($request->all());
+        $request->validate([
+            'status' => 'required|boolean',
+        ]);
+
+        $student->update([
+            'status' => $request->status,
+        ]);
+
+        return response()->json(['success' => 'Status siswa berhasil diperbarui.']);
     }
 }

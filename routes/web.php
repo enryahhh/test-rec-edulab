@@ -19,3 +19,4 @@ Route::get('/', function () {
 });
 
 Route::resource('student',StudentController::class);
+Route::put('student/{id}/update-status', [StudentController::class, 'updateStatusSiswa'])->name('student.update-status');
