@@ -63,25 +63,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     
-    <script type="module">
-        document.getElementById('logout-link').addEventListener('click', function(event) {
-        event.preventDefault();
-        Swal.fire({
-            title: 'Konfirmasi',
-            text: 'Apakah Anda yakin ingin logout?',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonText: 'Iya',
-            cancelButtonText: 'Batal',
-        }).then((result) => {
-            if (result.isConfirmed) {
-                document.getElementById('logout-form').submit();
-            }
-        });
-    });
-    </script>
     @stack('scripts')
-    @include('utils.alert')
 </body>
 
 </html>
